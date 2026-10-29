@@ -181,6 +181,47 @@
   .up .own{min-width:26px;text-align:right;font-family:'Sora',sans-serif;font-weight:700;font-size:.9rem;color:var(--azure-soft)}
   .up .cost{min-width:70px;text-align:right;font-size:.85rem;color:var(--coral-soft);font-variant-numeric:tabular-nums}
 
+  /* supernova + victory */
+  .head-btns{display:flex;gap:8px}
+  .nova{
+    margin-top:14px;padding:14px 15px;border-radius:16px;border:1px solid rgba(255,122,107,.35);
+    background:radial-gradient(circle at 0 0,rgba(255,122,107,.16),transparent 60%),var(--glass);
+  }
+  .nova[hidden]{display:none}
+  .nova-top{display:flex;justify-content:space-between;align-items:center;font-family:'Sora',sans-serif}
+  .nova-top b{font-size:.95rem}
+  .nova-top span{color:var(--coral-soft);font-weight:700;font-size:.9rem}
+  .nova p{color:var(--muted);font-size:.8rem;margin:6px 0 10px}
+  .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--azure),var(--coral));transition:width .3s}
+  .nova button{
+    margin-top:12px;width:100%;padding:11px;border-radius:12px;border:0;cursor:pointer;
+    font-family:'Sora',sans-serif;font-weight:600;font-size:.92rem;color:#06101a;
+    background:linear-gradient(110deg,var(--coral),var(--coral-soft));transition:.2s;
+  }
+  .nova button:disabled{opacity:.4;cursor:not-allowed}
+  .nova button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px -8px rgba(255,122,107,.7)}
+  .win{
+    position:fixed;inset:0;z-index:15;display:grid;place-items:center;padding:24px;
+    background:rgba(2,4,9,.78);backdrop-filter:blur(8px);animation:fadeIn .5s ease both;
+  }
+  .win[hidden]{display:none}
+  .win-card{
+    max-width:440px;width:100%;text-align:center;padding:36px 28px;border-radius:26px;
+    border:1px solid rgba(47,168,255,.4);background:radial-gradient(circle at 0 0,rgba(47,168,255,.2),transparent 55%),radial-gradient(circle at 100% 100%,rgba(255,122,107,.22),transparent 55%),#070d16;
+    box-shadow:0 30px 80px -20px rgba(47,168,255,.4);
+  }
+  .win-star{
+    font-size:3.2rem;line-height:1;
+    background:linear-gradient(110deg,var(--azure-soft),#fff,var(--coral-soft));-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .win-card h2{font-family:'Sora',sans-serif;font-size:1.8rem;margin:10px 0 6px}
+  .win-card p{color:var(--muted);font-size:.95rem}
+  .win-meta{margin:16px 0;padding:10px 12px;border-radius:12px;font-size:.82rem;color:var(--azure-soft);background:rgba(47,168,255,.08);border:1px solid rgba(47,168,255,.25)}
+  .win-note{margin-bottom:22px}
+  .win-note b{color:var(--coral-soft)}
+  .win-close{display:block;margin:16px auto 0;background:none;border:0;color:var(--muted);font:inherit;font-size:.88rem;cursor:pointer;text-decoration:underline}
+
   /* cards */
   .cards{
     display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:84px;
@@ -312,8 +353,17 @@
       <span><b id="memberCount">0</b> members</span>
     </div>
     <section class="game" id="game" hidden>
-      <div class="game-head"><span>Upgrades</span><button type="button" id="reset">Reset</button></div>
+      <div class="game-head">
+        <span>Upgrades</span>
+        <span class="head-btns"><button type="button" id="victory" hidden>✦ Stargazer</button><button type="button" id="reset">Reset</button></span>
+      </div>
       <div class="shop" id="shop"></div>
+      <div class="nova" id="nova" hidden>
+        <div class="nova-top"><b>🌟 Supernova</b><span id="novaCount">0 / 10</span></div>
+        <p id="novaDesc"></p>
+        <div class="bar"><i id="novaBar"></i></div>
+        <button type="button" id="novaBtn" disabled>Go Supernova</button>
+      </div>
     </section>
   </header>
 
@@ -364,6 +414,18 @@
   <footer>
     © <span id="yr"></span> AstroLand · <a href="https://discord.gg/ANDA2UUXFW" target="_blank" rel="noopener">discord.gg/ANDA2UUXFW</a>
   </footer>
+</div>
+
+<div class="win" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <div class="win-card">
+    <div class="win-star">✦</div>
+    <h2 id="winTitle">You beat AstroLand</h2>
+    <p>10 Supernovas. You're a true Stargazer.</p>
+    <div class="win-meta" id="winMeta"></div>
+    <p class="win-note">Take a screenshot of this screen and DM it to the server owner on Discord to claim the exclusive <b>Stargazer</b> role.</p>
+    <a class="btn" href="https://discord.gg/ANDA2UUXFW" target="_blank" rel="noopener">Open Discord</a>
+    <button type="button" class="win-close" id="winClose">Keep playing</button>
+  </div>
 </div>
 
 <script>
@@ -479,10 +541,18 @@
       {id:"hole",   name:"Black Hole",     desc:"+50 stars / sec", base:1200,  grow:1.15, sec:50,    icon:"🌀"},
       {id:"galaxy", name:"Galaxy Engine",  desc:"+300 stars / sec",base:14000, grow:1.15, sec:300,   icon:"🌌"}
     ];
-    var s = {stars:0, clicks:0, owned:{}};
+    var MAX = 10;
+    var s = {stars:0, clicks:0, earned:0, nova:0, owned:{}, won:false, wonAt:0};
     try{
       var raw = localStorage.getItem(KEY);
-      if(raw){ var o = JSON.parse(raw); if(o && typeof o.stars === "number"){ s.stars = o.stars; s.clicks = o.clicks || 0; s.owned = o.owned || {}; } }
+      if(raw){
+        var o = JSON.parse(raw);
+        if(o && typeof o.stars === "number"){
+          s.stars = o.stars; s.clicks = o.clicks || 0; s.owned = o.owned || {};
+          s.earned = typeof o.earned === "number" ? o.earned : o.stars;
+          s.nova = Math.min(MAX, o.nova || 0); s.won = !!o.won; s.wonAt = o.wonAt || 0;
+        }
+      }
     }catch(e){}
     ups.forEach(function(u){ s.owned[u.id] = s.owned[u.id] || 0; });
 
@@ -491,8 +561,9 @@
 
     function save(){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
     function cost(u){ return Math.ceil(u.base * Math.pow(u.grow, s.owned[u.id])); }
-    function perClick(){ return 1 + s.owned.power; }
-    function perSec(){ var t = 0; ups.forEach(function(u){ if(u.sec) t += u.sec * s.owned[u.id]; }); return t; }
+    function mult(){ return 1 + s.nova; }
+    function perClick(){ return (1 + s.owned.power) * mult(); }
+    function perSec(){ var t = 0; ups.forEach(function(u){ if(u.sec) t += u.sec * s.owned[u.id]; }); return t * mult(); }
     function fmt(n){
       if(n < 1000) return Math.floor(n).toLocaleString();
       var names = ["K","M","B","T","Qa"], i = -1;
@@ -514,13 +585,14 @@
 
     function render(){
       num.textContent = fmt(s.stars);
-      if(s.clicks || perSec()) rate.textContent = "+" + fmt(perClick()) + " per tap · " + fmt(perSec()) + " / sec";
+      if(s.clicks || perSec()) rate.textContent = "+" + fmt(perClick()) + " per tap · " + fmt(perSec()) + " / sec" + (s.nova ? " · ×" + mult() + " boost" : "");
       ups.forEach(function(u){
         var c = cost(u);
         u.ownEl.textContent = s.owned[u.id];
         u.costEl.textContent = "★ " + fmt(c);
         u.el.disabled = s.stars < c;
       });
+      renderNova();
     }
 
     function floatText(x, y, txt){
@@ -538,7 +610,7 @@
       var x = (e.clientX || e.clientY) ? e.clientX : r.left + r.width/2;
       var y = (e.clientX || e.clientY) ? e.clientY : r.top + r.height/2;
       var gain = perClick();
-      s.stars += gain; s.clicks++;
+      s.stars += gain; s.earned += gain; s.clicks++;
       game.hidden = false; score.hidden = false;
       floatText(x, y - 10, "+" + fmt(gain));
       if(!calm && window.AstroBurst){
@@ -553,18 +625,67 @@
     });
 
     document.getElementById("reset").addEventListener("click", function(){
-      if(!confirm("Reset all your stars and upgrades?")) return;
-      s = {stars:0, clicks:0, owned:{}};
+      if(!confirm("Reset EVERYTHING, including your Supernovas?")) return;
+      s = {stars:0, clicks:0, earned:0, nova:0, owned:{}, won:false, wonAt:0};
       ups.forEach(function(u){ s.owned[u.id] = 0; });
       rate.textContent = "";
       game.hidden = true; score.hidden = true; save(); render();
     });
 
+    /* Supernova: prestige. Each one needs 2.5x more stars earned in a run and gives a permanent boost. 10 = game beaten. */
+    var novaEl = document.getElementById("nova"), novaCount = document.getElementById("novaCount"),
+        novaDesc = document.getElementById("novaDesc"), novaBar = document.getElementById("novaBar"),
+        novaBtn = document.getElementById("novaBtn"), victory = document.getElementById("victory"),
+        winEl = document.getElementById("win"), winMeta = document.getElementById("winMeta");
+
+    function need(n){ return Math.round(20000 * Math.pow(2.5, n)); }
+
+    function renderNova(){
+      victory.hidden = !s.won;
+      novaEl.hidden = !(s.earned >= 2000 || s.nova > 0);
+      novaCount.textContent = s.nova + " / " + MAX;
+      if(s.nova >= MAX){
+        novaDesc.textContent = "Every star in the sky is yours. You're a Stargazer.";
+        novaBar.style.width = "100%"; novaBtn.disabled = true; novaBtn.textContent = "Maxed out ✦";
+        return;
+      }
+      var n = need(s.nova);
+      novaDesc.textContent = "Reset your stars and upgrades for a permanent boost (×" + mult() + " → ×" + (mult()+1) + "). Needs " + fmt(n) + " stars earned this run.";
+      novaBar.style.width = Math.min(100, s.earned / n * 100) + "%";
+      novaBtn.disabled = s.earned < n;
+      novaBtn.textContent = "Go Supernova";
+    }
+
+    function showWin(){
+      winMeta.textContent = MAX + " / " + MAX + " Supernovas · " + s.clicks.toLocaleString() + " taps · " + new Date(s.wonAt || Date.now()).toLocaleString();
+      winEl.hidden = false;
+      if(!calm && window.AstroBurst){
+        [0, 250, 500].forEach(function(t){
+          setTimeout(function(){ window.AstroBurst(innerWidth * (.3 + Math.random()*.4), innerHeight * (.25 + Math.random()*.3), true); }, t);
+        });
+      }
+    }
+
+    novaBtn.addEventListener("click", function(){
+      if(s.nova >= MAX || s.earned < need(s.nova)) return;
+      if(!confirm("Go Supernova? You'll lose all your stars and upgrades, but keep a permanent boost.")) return;
+      s.nova++; s.stars = 0; s.earned = 0;
+      ups.forEach(function(u){ s.owned[u.id] = 0; });
+      if(s.nova >= MAX){ s.won = true; s.wonAt = Date.now(); showWin(); }
+      else if(!calm && window.AstroBurst){
+        var r = wrap.getBoundingClientRect();
+        window.AstroBurst(r.left + r.width/2, r.top + r.height/2, true);
+      }
+      save(); render();
+    });
+    victory.addEventListener("click", showWin);
+    document.getElementById("winClose").addEventListener("click", function(){ winEl.hidden = true; });
+
     var last = Date.now();
     setInterval(function(){
       var now = Date.now(), dt = (now - last) / 1000; last = now;
       var ps = perSec();
-      if(ps){ s.stars += ps * dt; render(); }
+      if(ps){ s.stars += ps * dt; s.earned += ps * dt; render(); }
     }, 100);
     setInterval(save, 5000);
     document.addEventListener("visibilitychange", function(){ if(document.hidden) save(); });
