@@ -120,6 +120,16 @@
   .btn:hover::after{left:140%}
   .btn svg{width:22px;height:22px;flex:none}
 
+  /* live count */
+  .live{
+    display:inline-flex;align-items:center;gap:14px;margin-top:26px;padding:9px 20px;border-radius:999px;
+    font-size:.9rem;color:var(--muted);border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);
+  }
+  .live[hidden]{display:none}
+  .live b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .live .sep{width:1px;height:14px;background:var(--line)}
+  .live .g{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:#3ddc97;box-shadow:0 0 10px #3ddc97}
+
   /* cards */
   .cards{
     display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:84px;
@@ -156,6 +166,15 @@
   .past h2{font-family:'Sora',sans-serif;font-size:clamp(1.6rem,4vw,2.1rem);line-height:1.15;margin-bottom:14px}
   .past h2 span{color:var(--coral)}
   .past p{color:var(--muted)}
+  .btn-alt{
+    display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:13px 26px;border-radius:999px;
+    text-decoration:none;font-family:'Sora',sans-serif;font-weight:600;font-size:.95rem;color:var(--text);
+    background:linear-gradient(110deg,rgba(255,122,107,.22),rgba(255,122,107,.08));
+    border:1px solid rgba(255,122,107,.5);transition:.25s;
+  }
+  .btn-alt svg{width:18px;height:18px;transition:transform .25s}
+  .btn-alt:hover{transform:translateY(-2px);border-color:var(--coral);box-shadow:0 12px 34px -10px rgba(255,122,107,.6)}
+  .btn-alt:hover svg{transform:translateX(4px)}
   .perk{
     padding:22px;border-radius:18px;background:rgba(4,7,13,.55);border:1px solid var(--line);
   }
@@ -209,6 +228,11 @@
         Join the Community
       </a>
     </div>
+    <div class="live" id="live" hidden>
+      <span><i class="g"></i><b id="onlineCount">0</b> online</span>
+      <span class="sep"></span>
+      <span><b id="memberCount">0</b> members</span>
+    </div>
   </header>
 
   <section class="cards">
@@ -234,6 +258,10 @@
       <span class="tag">Affiliated Server</span>
       <h2>We're affiliated with <span>Pastcraft SMP</span></h2>
       <p>Pastcraft is a cool survival multiplayer server, and we're proud to be partnered with it. Members of Pastcraft get their own dedicated private chat inside AstroLand.</p>
+      <a class="btn-alt" href="https://discord.gg/Jq82qmNHHH" target="_blank" rel="noopener">
+        Join Pastcraft SMP
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
     </div>
     <div class="perk">
       <div class="row"><span class="dot"></span>Survival multiplayer (SMP)</div>
@@ -271,6 +299,27 @@
   mountLogo(document.getElementById("navMark"));
 
   document.getElementById("yr").textContent = new Date().getFullYear();
+
+  /* live member count from Discord's public invite API (hidden if it fails) */
+  (function(){
+    fetch("https://discord.com/api/v10/invites/ANDA2UUXFW?with_counts=true")
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){
+        if(!d.approximate_member_count) return;
+        function count(el, to){
+          var start = performance.now(), dur = 1200;
+          (function step(t){
+            var p = Math.min((t-start)/dur,1);
+            el.textContent = Math.round(to*(1-Math.pow(1-p,3))).toLocaleString();
+            if(p<1) requestAnimationFrame(step);
+          })(start);
+        }
+        document.getElementById("live").hidden = false;
+        count(document.getElementById("onlineCount"), d.approximate_presence_count || 0);
+        count(document.getElementById("memberCount"), d.approximate_member_count);
+      })
+      .catch(function(){});
+  })();
 
   /* reveal on scroll */
   var io = new IntersectionObserver(function(es){
